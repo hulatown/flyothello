@@ -1,5 +1,6 @@
 /** End-to-end: run the full TS policy chain and compare scores and moves against Python. */
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { FlyBrain } from '../src/fly/sim.js';
@@ -10,9 +11,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const A = join(root, 'public', 'assets');
 const meta = JSON.parse(readFileSync(join(A, 'meta.json'), 'utf8'));
 const C = meta.sim;
-const load = (p: string) => { const b = readFileSync(p); const ab = new ArrayBuffer(b.byteLength); new Uint8Array(ab).set(b); return ab; };
+const load = (p: string) => { const b = p.endsWith('.gz') ? gunzipSync(readFileSync(p)) : readFileSync(p); const ab = new ArrayBuffer(b.byteLength); new Uint8Array(ab).set(b); return ab; };
 
-const brain = new FlyBrain(load(join(A, 'connectome.bin')), meta.connectome.neurons, meta.connectome.edges, C);
+const brain = new FlyBrain(load(join(A, 'connectome.bin.gz')), meta.connectome.neurons, meta.connectome.edges, C);
 const ro: Record<number, ReturnType<typeof parseReadout>> = {};
 const inj: Record<number, ReturnType<typeof parseInject>> = {};
 for (const n of [6, 8]) {

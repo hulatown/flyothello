@@ -110,7 +110,9 @@ npm run build        # static output in dist/
 ```
 
 Everything runs client-side; there is no server component. First load fetches
-~14 MB of connectome (≈9 MB gzipped), then each move takes ~300 ms on a desktop.
+about 10 MB, most of it the gzipped connectome, which the browser inflates with
+`DecompressionStream` (Safari 16.4+ / Chrome 80+). After that each move takes
+~300 ms on a desktop.
 
 A live view of neuron activity sits beside the board, projected onto a frontal
 view of the brain. The two optic lobes light up first (that is the injection),

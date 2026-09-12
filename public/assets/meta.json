@@ -4,7 +4,9 @@
   "edges": 2700513,
   "threshold": 5,
   "clipped": 8364,
-  "layout": "int32 indptr[N+1], int32 post[E], int8 weight[E]"
+  "layout": "int32 indptr[N+1], int32 post[E], int8 weight[E]",
+  "encoding": "gzip",
+  "raw_bytes": 14057125
  },
  "positions": {
   "count": 138639,

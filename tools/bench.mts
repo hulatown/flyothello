@@ -1,12 +1,13 @@
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { FlyBrain, poissonDrive, mulberry32 } from '../src/fly/sim.js';
 const A = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'assets');
 const meta = JSON.parse(readFileSync(join(A, 'meta.json'), 'utf8')); const C = meta.sim;
 const N = meta.connectome.neurons, E = meta.connectome.edges;
-const load = (p: string) => { const b = readFileSync(p); const ab = new ArrayBuffer(b.byteLength); new Uint8Array(ab).set(b); return ab; };
-const brain = new FlyBrain(load(join(A, 'connectome.bin')), N, E, C);
+const load = (p: string) => { const b = p.endsWith('.gz') ? gunzipSync(readFileSync(p)) : readFileSync(p); const ab = new ArrayBuffer(b.byteLength); new Uint8Array(ab).set(b); return ab; };
+const brain = new FlyBrain(load(join(A, 'connectome.bin.gz')), N, E, C);
 const ab = load(join(A, 'inject-8.bin'));
 const idx = new Int32Array(ab, 0, 33208);
 const rates = new Float32Array(33208).fill(50);

@@ -24,7 +24,8 @@ class MB32:
         return ((t ^ (t >> 14)) & 0xFFFFFFFF) / 4294967296
 
 N = M['connectome']['neurons']; E = M['connectome']['edges']
-raw = open(f'{A}/connectome.bin','rb').read()
+import gzip
+raw = gzip.open(f'{A}/connectome.bin.gz','rb').read()
 indptr = np.frombuffer(raw, np.int32, N+1, 0)
 post   = np.frombuffer(raw, np.int32, E, (N+1)*4)
 w8     = np.frombuffer(raw, np.int8,  E, (N+1)*4 + E*4)

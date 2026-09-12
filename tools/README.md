@@ -38,7 +38,7 @@ matters; see the finding in the top-level README.
 ## Export and verification
 
 ```bash
-python3 tools/export_assets.py     # writes public/assets/*
+python3 tools/export_assets.py     # writes public/assets/* (connectome is gzipped)
 python3 tools/verify_sim.py        # Python reference spike counts
 npx tsx tools/verify_sim.mts       # TS must match bit-for-bit
 python3 tools/verify_policy.py     # reference scores and moves

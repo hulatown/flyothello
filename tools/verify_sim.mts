@@ -1,5 +1,6 @@
 /** Verify the TS simulation core against the Python reference implementation. */
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { FlyBrain, poissonDrive, mulberry32 } from '../src/fly/sim.js';
@@ -10,13 +11,13 @@ const C = meta.sim;
 const N = meta.connectome.neurons, E = meta.connectome.edges;
 
 function loadBuf(p: string): ArrayBuffer {
-  const b = readFileSync(p);
+  const b = p.endsWith('.gz') ? gunzipSync(readFileSync(p)) : readFileSync(p);
   const ab = new ArrayBuffer(b.byteLength);
   new Uint8Array(ab).set(b);
   return ab;
 }
 
-const brain = new FlyBrain(loadBuf(join(A, 'connectome.bin')), N, E, C);
+const brain = new FlyBrain(loadBuf(join(A, 'connectome.bin.gz')), N, E, C);
 const cases = JSON.parse(readFileSync(join(A, '..', '..', 'tools', 'expected.json'), 'utf8'));
 
 const inj: Record<number, { idx: Int32Array; cell: Int8Array }> = {};

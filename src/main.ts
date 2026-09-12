@@ -19,7 +19,7 @@ let seedCounter = 1;
 /* ---------------- asset loading ---------------- */
 async function boot() {
   const files: [string, string][] = [
-    ['meta', '/assets/meta.json'], ['connectome', '/assets/connectome.bin'],
+    ['meta', '/assets/meta.json'], ['connectome', '/assets/connectome.bin.gz'],
     ['positions', '/assets/positions.bin'],
     ['inject6', '/assets/inject-6.bin'], ['inject8', '/assets/inject-8.bin'],
     ['readout6', '/assets/readout-6.bin'], ['readout8', '/assets/readout-8.bin'],
@@ -30,7 +30,15 @@ async function boot() {
   for (let i = 0; i < files.length; i++) {
     const [k, url] = files[i];
     const r = await fetch(url);
-    out[k] = k === 'meta' ? await r.json() : await r.arrayBuffer();
+    if (k === 'meta') out[k] = await r.json();
+    else if (url.endsWith('.gz')) {
+      // Inflated here rather than by the CDN: application/octet-stream is not on
+      // Vercel's compression allowlist, so it would otherwise travel uncompressed.
+      if (typeof DecompressionStream === 'undefined')
+        throw new Error('This browser lacks DecompressionStream (Safari 16.4+ / Chrome 80+).');
+      const ds = new DecompressionStream('gzip');
+      out[k] = await new Response(r.body!.pipeThrough(ds)).arrayBuffer();
+    } else out[k] = await r.arrayBuffer();
     done += weights[i];
     $('#loadBar').style.width = `${Math.round(done * 100)}%`;
   }

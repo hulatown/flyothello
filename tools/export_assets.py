@@ -26,12 +26,18 @@ indptr = np.zeros(N+1, np.int32); np.cumsum(np.bincount(pre, minlength=N), out=i
 # Clip weights to int8: 99.9% of edges have |w| <= 127, the rest saturate.
 w8 = np.clip(wgt, -127, 127).astype(np.int8)
 clipped = int((np.abs(wgt) > 127).sum())
-with open(f'{OUT}/connectome.bin','wb') as f:
-    f.write(indptr.tobytes()); f.write(post.tobytes()); f.write(w8.tobytes())
+# Shipped gzipped: application/octet-stream is not on Vercel's compression
+# allowlist, so the CDN would serve 14 MB raw. The browser inflates it with
+# DecompressionStream, which works on any host.
+import gzip
+blob = indptr.tobytes() + post.tobytes() + w8.tobytes()
+with gzip.GzipFile(f'{OUT}/connectome.bin.gz', 'wb', compresslevel=9, mtime=0) as f:
+    f.write(blob)
 meta['connectome'] = dict(neurons=N, edges=int(len(post)), threshold=5, clipped=clipped,
-                          layout='int32 indptr[N+1], int32 post[E], int8 weight[E]')
-print(f"connectome.bin  {len(post):,} edges, {clipped} saturated, "
-      f"{os.path.getsize(f'{OUT}/connectome.bin')/1e6:.1f}MB")
+                          layout='int32 indptr[N+1], int32 post[E], int8 weight[E]',
+                          encoding='gzip', raw_bytes=len(blob))
+print(f"connectome.bin.gz  {len(post):,} edges, {clipped} saturated, "
+      f"{len(blob)/1e6:.1f}MB raw -> {os.path.getsize(f'{OUT}/connectome.bin.gz')/1e6:.1f}MB gzip")
 
 # ---------- 2. visualisation coordinates ----------
 xy = np.load('viz_xy.npy')
