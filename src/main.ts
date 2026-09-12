@@ -6,7 +6,7 @@ import { DARK, LIGHT, startBoard, legalMoves, applyMove, flips, score, type Boar
 
 const $ = <E extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as E;
 
-let lang: Lang = 'en', N = 8, hints = true, sci = false;
+let lang: Lang = 'en', N = 8, hints = true;
 let human = DARK, board: Board = startBoard(8), turn = DARK, busy = false;
 let hist: { b: Board; turn: number }[] = [];
 let pendingN: number | null = null, started = false;
@@ -50,6 +50,7 @@ function onWorker(e: MessageEvent) {
   if (m.type === 'ready') {
     ready = true;
     if (m.base) brainBase = new Uint8Array(m.base);
+    brainView = new BrainView($('#brain') as HTMLCanvasElement, brainBase);
     $('#loading').classList.add('gone');
     setTimeout(() => $('#loading').remove(), 500);
     askColor();
@@ -167,7 +168,7 @@ function flyThink() {
   render();
   worker.postMessage({
     type: 'think', board: board.slice().buffer, n: N, player: 3 - human,
-    seed: (seedCounter++ * 2654435761) >>> 0, temp: 0, viz: sci,
+    seed: (seedCounter++ * 2654435761) >>> 0, temp: 0, viz: true,
   });
 }
 
@@ -178,7 +179,7 @@ function applyFlyMove(move: number, degenerate: boolean) {
   board = applyMove(board, 3 - human, move, N);
   turn = human;
   setFly('happy');
-  if (degenerate && sci) say(T[lang].shrugMsg);
+  if (degenerate) say(T[lang].shrugMsg);
   render(); step();
 }
 
@@ -216,13 +217,6 @@ $('#bHint').onclick = () => {
   hints = !hints; document.body.classList.toggle('nohint', !hints);
   $('#bHint').classList.toggle('on', hints);
   if (turn === human && !busy) sayTurn();
-};
-$('#bSci').onclick = () => {
-  sci = !sci;
-  document.body.classList.toggle('sci', sci);
-  $('#bSci').classList.toggle('on', sci);
-  ($('#sciCard') as HTMLElement).hidden = !sci;
-  if (sci && !brainView) brainView = new BrainView($('#brain') as HTMLCanvasElement, brainBase);
 };
 $('#bUndo').onclick = () => {
   if (busy) return;

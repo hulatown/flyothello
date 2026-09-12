@@ -23,7 +23,7 @@
 }
 
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
-html,body{margin:0; height:100%}
+html,body{margin:0; height:100vh; height:100dvh}  /* dvh: Safari's 100vh excludes the toolbars */
 body{
   background:var(--bg); color:var(--text);
   font-family:"Baloo 2","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
@@ -64,21 +64,27 @@ body{
 /* Landscape: board and panel top-aligned, panel stacked vertically */
 @media (orientation:landscape){
   .app{flex-direction:row;align-items:flex-start}
-  .board-wrap{height:min(100%, calc(100vh - 128px)); width:min(100%, calc(100vh - 128px))}
+  .board-wrap{height:min(100%, calc(100dvh - 124px)); width:min(100%, calc(100dvh - 124px))}
   .panel{flex-direction:column;gap:12px;width:clamp(210px,27vw,320px);
          height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch}
 }
 /* Portrait: whole board visible on top, panel laid out horizontally */
 @media (orientation:portrait){
-  .app{flex-direction:column;align-items:center}
-  .board-wrap{width:min(96vw, calc(100vh - 300px)); height:min(96vw, calc(100vh - 300px))}
-  .panel{flex-direction:row;flex-wrap:wrap;align-items:stretch;gap:10px;
-         width:min(96vw,720px);justify-content:center}
-  .panel .fly-card{flex:1 1 210px}
-  .panel .scores{flex:0 1 150px}
-  .panel .btns{flex:1 1 200px}
-  .panel .sci{flex:1 1 100%;order:9}
-  .panel .note{order:10}
+  .app{flex-direction:column;align-items:center;
+       overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .board-wrap{width:min(94vw, calc(100dvh - 380px)); height:min(94vw, calc(100dvh - 380px))}
+  /* Deterministic 2-column grid so the panel is always exactly three rows. */
+  .panel{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;
+         width:min(96vw,760px);padding-bottom:10px}
+  .panel .fly-card{grid-column:1;padding:10px 12px}
+  .panel .sci     {grid-column:2;padding:10px 12px}
+  .panel .scores  {grid-column:1;padding:10px 12px}
+  .panel .btns    {grid-column:2;padding:10px 12px}
+  .panel .note    {grid-column:1 / -1}
+  .panel .fly-stage{width:72px;height:58px}
+  .panel .fly-say{min-height:2.1em;font-size:.84rem}
+  .panel .sci-legend{display:none}
+  .panel #brain{aspect-ratio:auto;height:92px}
 }
 
 
@@ -170,7 +176,6 @@ button.b[disabled]{opacity:.4}
 #brain{width:100%;height:auto;display:block;border-radius:7px;background:#0a1416;
        image-rendering:auto;aspect-ratio:320/154}
 .sci-legend{text-align:center}
-body.sci .panel{width:clamp(240px,32vw,360px)}
 
 /* ---------- loading screen ---------- */
 .loading{position:fixed;inset:0;z-index:60;background:var(--bg);display:grid;place-items:center;
