@@ -27,6 +27,7 @@ pipeline/gen_positions.py  labelled training positions via noisy self-play
 pipeline/features.py       position -> readout features, per wiring condition
 pipeline/train.py          fit readouts, evaluate real / shuffled / no-fly
 pipeline/stats.py          permutation-tested decoding scores
+pipeline/confirm6.py       pre-registered confirmatory test (6x6)
 ```
 
 The `shuffled` condition permutes the postsynaptic column of the connectivity
