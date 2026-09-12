@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FlyOthello</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-fly">🪰</span><span>FlyOthello</span>
+    <small id="brandSub">a real fly brain plays Othello</small></div>
+  <div class="ctrls">
+    <button id="bSize">6×6</button>
+    <button id="bHint" class="on">💡</button>
+    <button id="bSci">🔬</button>
+    <button id="bLang">中文</button>
+  </div>
+</header>
+
+<div class="app">
+  <div class="board-wrap"><div class="grid" id="grid"></div></div>
+  <div class="panel">
+    <div class="card fly-card">
+      <div class="fly-stage" id="flyStage"></div>
+      <div class="fly-say" id="say"></div>
+    </div>
+    <div class="card scores">
+      <div class="score" id="sD"><span class="pip d"></span><span>2</span></div>
+      <div class="score" id="sL"><span class="pip l"></span><span>2</span></div>
+    </div>
+    <div class="card btns">
+      <button class="b" id="bUndo">Undo</button>
+      <button class="b" id="bNew">New</button>
+    </div>
+    <div class="card sci" id="sciCard" hidden>
+      <div class="sci-head"><span id="sciTitle">Live neural activity</span><span class="mono" id="sciMs">—</span></div>
+      <canvas id="brain"></canvas>
+      <div class="sci-legend mono" id="sciLegend">138,639 neurons · 2,700,513 synapses</div>
+    </div>
+    <div class="note"><span id="note"></span> <a href="https://github.com/hulatown/flyothello" target="_blank" rel="noopener">github.com/hulatown/flyothello</a></div>
+  </div>
+</div>
+
+<div class="veil" id="veil">
+  <div class="chooser">
+    <h2 id="chTitle">Who goes first?</h2>
+    <p id="chSub">Black always starts.</p>
+    <div class="picks">
+      <button class="pick" id="pickD"><span class="big d"></span><span id="pdT">I'm Black</span><small id="pdS">you go first</small></button>
+      <button class="pick" id="pickL"><span class="big l"></span><span id="plT">I'm White</span><small id="plS">fly goes first</small></button>
+    </div>
+    <button class="cancel" id="chCancel">Cancel</button>
+  </div>
+</div>
+
+<div class="loading" id="loading">
+  <div class="load-inner">
+    <div class="fly-stage" id="loadFly"></div>
+    <div id="loadTxt">Waking the fly…</div>
+    <div class="barwrap"><div class="barfill" id="loadBar"></div></div>
+    <div class="mono" id="loadSub">loading connectome</div>
+  </div>
+</div>
+<div class="banner" id="banner"></div>
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

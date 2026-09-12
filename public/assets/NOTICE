@@ -1,0 +1,31 @@
+Derived data — CC-BY 4.0
+========================
+
+connectome.bin, positions.bin, inject-*.bin
+-------------------------------------------
+Derived from the FlyWire FAFB v783 connectome of the adult Drosophila
+melanogaster brain, redistributed under Creative Commons Attribution 4.0.
+
+connectome.bin contains, for 138,639 neurons, the 2,700,513 synaptic
+connections whose synapse count is >= 5, with the sign of each connection taken
+from the predicted neurotransmitter. Weights are clipped to int8 (8,364 edges
+saturate). positions.bin holds each neuron's soma position projected to 2D, used
+only for visualisation. inject-*.bin maps board squares onto the visual relay
+neurons that receive them.
+
+Please cite:
+  Dorkenwald et al. — Whole-brain annotation and multi-connectome cell typing
+  of Drosophila (the FlyWire connectome)
+
+The leaky integrate-and-fire parameters in meta.json follow:
+  Shiu et al., Nature (2024) — a leaky integrate-and-fire computational model
+  based on the connectome of the entire adult Drosophila brain
+
+The visual cell-type inventory used to select the relay layer follows:
+  Lappalainen et al., Nature (2024) — connectome-constrained networks predict
+  neural activity across the fly visual system
+
+readout-*.bin
+-------------
+Trained by this project (ridge regression over the readout layer only; the
+connectome is never modified). MIT licensed along with the rest of the code.

@@ -1,0 +1,45 @@
+{
+ "connectome": {
+  "neurons": 138639,
+  "edges": 2700513,
+  "threshold": 5,
+  "clipped": 8364,
+  "layout": "int32 indptr[N+1], int32 post[E], int8 weight[E]"
+ },
+ "positions": {
+  "count": 138639,
+  "layout": "uint16 x[N], interleaved xy",
+  "aspect": 2.081199812018553
+ },
+ "board8": {
+  "inject": 33208,
+  "readout": 1933,
+  "alpha": 10000.0,
+  "cells": 64,
+  "trained_on": 5000
+ },
+ "board6": {
+  "inject": 33208,
+  "readout": 2029,
+  "alpha": 10000.0,
+  "cells": 36,
+  "trained_on": 9000
+ },
+ "sim": {
+  "dt": 0.0001,
+  "v0": -0.052,
+  "vrst": -0.052,
+  "vth": -0.045,
+  "tmbr": 0.02,
+  "tau": 0.005,
+  "trfc": 0.0022,
+  "tdly": 0.0018,
+  "wsyn": 0.000275,
+  "steps": 300,
+  "lum": {
+   "empty": 50.0,
+   "mine": 10.0,
+   "theirs": 190.0
+  }
+ }
+}
