@@ -39,6 +39,7 @@
     <div class="card sci" id="sciCard">
       <div class="sci-head"><span id="sciTitle">Live neural activity</span><span class="mono" id="sciMs">—</span></div>
       <canvas id="brain"></canvas>
+      <canvas id="tree" hidden></canvas>
       <div class="sci-legend mono" id="sciLegend">138,639 neurons · 2,700,513 synapses</div>
     </div>
     <div class="note"><span id="note"></span> <a href="https://github.com/hulatown/flyothello" target="_blank" rel="noopener">github.com/hulatown/flyothello</a></div>
@@ -47,7 +48,17 @@
 
 <div class="veil" id="veil">
   <div class="chooser">
-    <h2 id="chTitle">Who goes first?</h2>
+    <h2 id="chTitle">New game</h2>
+    <div class="seg" id="segOpp">
+      <button data-opp="fly" class="on"><span class="ic">🪰</span><span id="segFly">Fly</span></button>
+      <button data-opp="engine"><span class="ic">🤖</span><span id="segRobot">Robot</span></button>
+    </div>
+    <div class="depthrow" id="depthRow" hidden>
+      <span id="chDepth">Thinking depth</span>
+      <div class="seg small" id="segDepth">
+        <button data-d="1">1</button><button data-d="2">2</button><button data-d="3" class="on">3</button>
+      </div>
+    </div>
     <p id="chSub">Black always starts.</p>
     <div class="picks">
       <button class="pick" id="pickD"><span class="big d"></span><span id="pdT">I'm Black</span><small id="pdS">you go first</small></button>

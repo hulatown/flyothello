@@ -1,7 +1,10 @@
 import './style.css';
 import { T, type Lang } from './ui/i18n';
-import { drawFly, type FlyState } from './ui/fly';
 import { BrainView } from './ui/brainview';
+import { TreeView } from './ui/treeview';
+import { FlyOpponent } from './opponents/fly';
+import { EngineOpponent } from './opponents/engine';
+import type { Opponent, AgentState } from './opponents/types';
 import { DARK, LIGHT, startBoard, legalMoves, applyMove, flips, score, type Board } from './game/othello';
 
 const $ = <E extends HTMLElement = HTMLElement>(s: string) => document.querySelector(s) as E;
@@ -11,10 +14,17 @@ let human = DARK, board: Board = startBoard(8), turn = DARK, busy = false;
 let hist: { b: Board; turn: number }[] = [];
 let pendingN: number | null = null, started = false;
 let idleTimer: number | null = null, idlePool: string[] = [];
-let brainView: BrainView | null = null;
+let brainView: BrainView | null = null, treeView: TreeView | null = null;
 let brainBase: Uint8Array | null = null;
-let worker: Worker, ready = false;
-let seedCounter = 1;
+let ready = false;
+
+/* ---------------- opponents ---------------- */
+const opponents: Record<string, Opponent> = {};
+let oppId = 'fly';                 // remembered across games
+let depth = 3;                     // engine search depth
+let pendingOpp = oppId, pendingDepth = depth;
+const opp = () => opponents[oppId];
+const L = () => opp().lines(lang);
 
 /* ---------------- asset loading ---------------- */
 async function boot() {
@@ -32,8 +42,8 @@ async function boot() {
     const r = await fetch(url);
     if (k === 'meta') out[k] = await r.json();
     else if (url.endsWith('.gz')) {
-      // Inflated here rather than by the CDN: application/octet-stream is not on
-      // Vercel's compression allowlist, so it would otherwise travel uncompressed.
+      // Inflated here rather than by the CDN: the asset then travels compressed
+      // regardless of what a particular host decides to compress.
       if (typeof DecompressionStream === 'undefined')
         throw new Error('This browser lacks DecompressionStream (Safari 16.4+ / Chrome 80+).');
       const ds = new DecompressionStream('gzip');
@@ -42,8 +52,21 @@ async function boot() {
     done += weights[i];
     $('#loadBar').style.width = `${Math.round(done * 100)}%`;
   }
-  worker = new Worker(new URL('./fly/worker.ts', import.meta.url), { type: 'module' });
-  worker.onmessage = onWorker;
+
+  const worker = new Worker(new URL('./fly/worker.ts', import.meta.url), { type: 'module' });
+  worker.onmessage = (e: MessageEvent) => {
+    if (e.data.type !== 'ready') return;
+    if (e.data.base) brainBase = new Uint8Array(e.data.base);
+    brainView = new BrainView($('#brain') as HTMLCanvasElement, brainBase);
+    treeView = new TreeView($('#tree') as HTMLCanvasElement);
+    opponents.fly = new FlyOpponent(worker, () => brainView);
+    opponents.engine = new EngineOpponent(() => treeView);
+    ready = true;
+    $('#loading').classList.add('gone');
+    setTimeout(() => $('#loading').remove(), 500);
+    labels();
+    askNew();
+  };
   worker.postMessage({
     type: 'init', meta: out.meta, connectome: out.connectome, positions: out.positions,
     inject: { 6: out.inject6, 8: out.inject8 },
@@ -53,27 +76,11 @@ async function boot() {
       out.readout6 as ArrayBuffer, out.readout8 as ArrayBuffer]);
 }
 
-function onWorker(e: MessageEvent) {
-  const m = e.data;
-  if (m.type === 'ready') {
-    ready = true;
-    if (m.base) brainBase = new Uint8Array(m.base);
-    brainView = new BrainView($('#brain') as HTMLCanvasElement, brainBase);
-    $('#loading').classList.add('gone');
-    setTimeout(() => $('#loading').remove(), 500);
-    askColor();
-  } else if (m.type === 'tick') {
-    brainView?.push(m.grid);
-  } else if (m.type === 'done') {
-    $('#sciMs').textContent = `${Math.round(m.ms)} ms`;
-    applyFlyMove(m.move, m.degenerate);
-  }
-}
-
 /* ---------------- game flow ---------------- */
-function askColor(targetN?: number) {
+function askNew(targetN?: number) {
   pendingN = targetN ?? N;
-  $('#chSub').textContent = `${pendingN}×${pendingN} · ${T[lang].chSub}`;
+  pendingOpp = oppId; pendingDepth = depth;
+  syncDialog();
   ($('#chCancel') as HTMLElement).style.display = started ? '' : 'none';
   $('#veil').classList.add('show'); clearIdle();
 }
@@ -83,12 +90,14 @@ function cancelChoose() {
   if (turn === human && !busy) { sayTurn(); armIdle(); }
 }
 function start(who: number) {
-  if (pendingN !== null && pendingN !== N) { N = pendingN; labels(); }
+  if (pendingN !== null && pendingN !== N) N = pendingN;
+  oppId = pendingOpp; depth = pendingDepth;
   pendingN = null; started = true; human = who;
+  labels();
   $('#veil').classList.remove('show');
   board = startBoard(N); turn = DARK; hist = []; busy = false;
-  brainView?.clear();
-  setFly('idle'); render();
+  opp().reset();
+  setAgent('idle'); render();
   if (turn === human) { sayTurn(); armIdle(); } else step();
 }
 
@@ -134,14 +143,14 @@ function banner(t: string) {
   const b = $('#banner'); b.textContent = t; b.classList.add('show');
   setTimeout(() => b.classList.remove('show'), 1900);
 }
-function setFly(s: FlyState) { drawFly($('#flyStage'), s); }
+function setAgent(s: AgentState) { if (ready) opp().draw($('#flyStage'), s); }
 
 function armIdle() {
   clearIdle();
   idleTimer = window.setTimeout(function tick() {
-    if (busy || turn !== human) return;
-    if (!idlePool.length) idlePool = [...T[lang].idle].sort(() => Math.random() - 0.5);
-    say(idlePool.pop()!); setFly(Math.random() < 0.4 ? 'nap' : 'idle');
+    if (busy || turn !== human || !ready) return;
+    if (!idlePool.length) idlePool = [...L().idle].sort(() => Math.random() - 0.5);
+    say(idlePool.pop()!); setAgent(Math.random() < 0.4 ? 'nap' : 'idle');
     idleTimer = window.setTimeout(tick, 9000);
   }, 12000);
 }
@@ -150,7 +159,7 @@ function clearIdle() { if (idleTimer) { clearTimeout(idleTimer); idleTimer = nul
 function play(s: number) {
   if (busy || turn !== human || !ready) return;
   if (!flips(board, human, s, N).length) return;
-  clearIdle(); setFly('idle');
+  clearIdle(); setAgent('idle');
   hist.push({ b: board.slice(), turn });
   board = applyMove(board, human, s, N);
   turn = 3 - human; render(); step();
@@ -160,34 +169,30 @@ function step() {
   const me = legalMoves(board, turn, N), other = legalMoves(board, 3 - turn, N);
   if (!me.length && !other.length) return finish();
   if (!me.length) {
-    banner(turn === human ? T[lang].noMove : T[lang].flyPass);
-    if (turn !== human) setFly('shrug');
+    banner(turn === human ? T[lang].noMove : T[lang].oppPass);
+    if (turn !== human) setAgent('shrug');
     turn = 3 - turn; render();
     if (turn !== human) return step();
     sayTurn(); armIdle(); return;
   }
-  if (turn !== human) flyThink();
-  else { sayTurn(); setFly('idle'); render(); armIdle(); }
+  if (turn !== human) void oppThink();
+  else { sayTurn(); setAgent('idle'); render(); armIdle(); }
 }
 
-function flyThink() {
-  busy = true; setFly('think');
-  const th = T[lang].think; say(th[(Math.random() * th.length) | 0]);
-  render();
-  worker.postMessage({
-    type: 'think', board: board.slice().buffer, n: N, player: 3 - human,
-    seed: (seedCounter++ * 2654435761) >>> 0, temp: 0, viz: true,
+async function oppThink() {
+  busy = true; setAgent('think'); render();
+  const r = await opp().think({
+    board, player: 3 - human, n: N, temp: 0, depth, lang,
+    say: (t) => say(t),
   });
-}
-
-function applyFlyMove(move: number, degenerate: boolean) {
+  $('#sciMs').textContent = r.caption ?? '—';
   busy = false;
-  if (move < 0) { turn = human; render(); step(); return; }
+  if (r.move < 0) { turn = human; render(); step(); return; }
   hist.push({ b: board.slice(), turn });
-  board = applyMove(board, 3 - human, move, N);
+  board = applyMove(board, 3 - human, r.move, N);
   turn = human;
-  setFly('happy');
-  if (degenerate) say(T[lang].shrugMsg);
+  setAgent('happy');
+  if (r.degenerate) say(L().shrug);
   render(); step();
 }
 
@@ -196,31 +201,54 @@ function finish() {
   const [d, l] = score(board);
   const mine = human === DARK ? d : l, his = human === DARK ? l : d;
   const t = mine > his ? T[lang].win : mine < his ? T[lang].lose : T[lang].draw;
-  banner(t); say(t); setFly(mine > his ? 'sad' : 'happy'); render();
+  banner(t); say(t); setAgent(mine > his ? 'sad' : 'happy'); render();
+}
+
+/* ---------------- panel ---------------- */
+function applyPanel() {
+  const isFly = opp().panel === 'brain';
+  ($('#brain') as HTMLCanvasElement).hidden = !isFly;
+  ($('#tree') as HTMLCanvasElement).hidden = isFly;
+  $('#sciTitle').textContent = isFly ? T[lang].panelFly : T[lang].panelEngine;
+  $('#sciLegend').textContent = isFly ? T[lang].legendFly : T[lang].legendEngine;
+  $('#note').textContent = L().note;
 }
 
 /* ---------------- controls ---------------- */
+function syncDialog() {
+  $('#chSub').textContent = `${pendingN ?? N}×${pendingN ?? N} · ${T[lang].chSub}`;
+  document.querySelectorAll<HTMLButtonElement>('#segOpp button').forEach(b =>
+    b.classList.toggle('on', b.dataset.opp === pendingOpp));
+  document.querySelectorAll<HTMLButtonElement>('#segDepth button').forEach(b =>
+    b.classList.toggle('on', Number(b.dataset.d) === pendingDepth));
+  ($('#depthRow') as HTMLElement).hidden = pendingOpp !== 'engine';
+}
 function labels() {
   const t = T[lang];
   $('#bSize').textContent = N === 8 ? t.size6 : t.size8;
-  $('#bUndo').textContent = t.undo; $('#bNew').textContent = t.nw;
-  $('#bLang').textContent = t.lang; $('#note').textContent = t.note;
+  $('#bUndo').textContent = t.undo; $('#bNew').textContent = t.nw; $('#bLang').textContent = t.lang;
   $('#chTitle').textContent = t.chTitle; $('#chCancel').textContent = t.cancel;
-  $('#chSub').textContent = `${pendingN ?? N}×${pendingN ?? N} · ${t.chSub}`;
+  $('#chDepth').textContent = t.chDepth;
+  $('#segFly').textContent = t.oppFly; $('#segRobot').textContent = t.oppRobot;
   $('#pdT').textContent = t.pdT; $('#pdS').textContent = t.pdS;
   $('#plT').textContent = t.plT; $('#plS').textContent = t.plS;
-  $('#sciTitle').textContent = t.sciTitle;
   $('#brandSub').textContent = t.brandSub;
   $('#loadTxt').textContent = t.loading; $('#loadSub').textContent = t.loadSub;
+  if (ready) applyPanel();
+  syncDialog();
 }
 
-$('#bSize').onclick = () => askColor(N === 8 ? 6 : 8);
-$('#bNew').onclick = () => askColor();
+$('#bSize').onclick = () => askNew(N === 8 ? 6 : 8);
+$('#bNew').onclick = () => askNew();
 $('#pickD').onclick = () => start(DARK);
 $('#pickL').onclick = () => start(LIGHT);
 $('#chCancel').onclick = cancelChoose;
 $('#veil').onclick = e => { if (e.target === $('#veil')) cancelChoose(); };
 addEventListener('keydown', (e: KeyboardEvent) => { if (e.key === 'Escape') cancelChoose(); });
+document.querySelectorAll<HTMLButtonElement>('#segOpp button').forEach(b =>
+  b.onclick = () => { pendingOpp = b.dataset.opp!; syncDialog(); });
+document.querySelectorAll<HTMLButtonElement>('#segDepth button').forEach(b =>
+  b.onclick = () => { pendingDepth = Number(b.dataset.d); syncDialog(); });
 $('#bHint').onclick = () => {
   hints = !hints; document.body.classList.toggle('nohint', !hints);
   $('#bHint').classList.toggle('on', hints);
@@ -230,10 +258,9 @@ $('#bUndo').onclick = () => {
   if (busy) return;
   clearIdle();
   while (hist.length) { const h = hist.pop()!; if (h.turn === human) { board = h.b; turn = human; break; } }
-  setFly('idle'); render(); sayTurn(); armIdle();
+  setAgent('idle'); render(); sayTurn(); armIdle();
 };
 $('#bLang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; idlePool = []; labels(); if (turn === human && !busy) sayTurn(); };
 
-drawFly($('#loadFly'), 'nap');
-setFly('idle'); labels(); render();
+labels(); render();
 boot();
