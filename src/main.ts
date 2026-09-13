@@ -1,5 +1,6 @@
 import './style.css';
 import { T, type Lang } from './ui/i18n';
+import { drawFly } from './ui/fly';
 import { BrainView } from './ui/brainview';
 import { TreeView } from './ui/treeview';
 import { FlyOpponent } from './opponents/fly';
@@ -22,6 +23,10 @@ let ready = false;
 const opponents: Record<string, Opponent> = {};
 let oppId = 'fly';                 // remembered across games
 let depth = 3;                     // engine search depth
+/** Depth 1/2/3 is implemented and verified but hidden for now: depth 3 is the
+ *  engine the fly was trained against, and one fewer choice keeps the new-game
+ *  dialog to a single tap. Flip to true to expose the picker. */
+const SHOW_DEPTH = false;
 let pendingOpp = oppId, pendingDepth = depth;
 const opp = () => opponents[oppId];
 const L = () => opp().lines(lang);
@@ -40,15 +45,24 @@ async function boot() {
   for (let i = 0; i < files.length; i++) {
     const [k, url] = files[i];
     const r = await fetch(url);
-    if (k === 'meta') out[k] = await r.json();
-    else if (url.endsWith('.gz')) {
-      // Inflated here rather than by the CDN: the asset then travels compressed
-      // regardless of what a particular host decides to compress.
-      if (typeof DecompressionStream === 'undefined')
-        throw new Error('This browser lacks DecompressionStream (Safari 16.4+ / Chrome 80+).');
-      const ds = new DecompressionStream('gzip');
-      out[k] = await new Response(r.body!.pipeThrough(ds)).arrayBuffer();
-    } else out[k] = await r.arrayBuffer();
+    if (!r.ok) throw new Error(`${url} -> HTTP ${r.status}`);
+    if (k === 'meta') { out[k] = await r.json(); }
+    else {
+      // The connectome ships gzipped so it travels compressed on any host. Whether
+      // it arrives still compressed depends on the server: Vercel sends it raw
+      // (Content-Type: application/gzip), while the Vite dev server sets
+      // Content-Encoding: gzip and the browser inflates it for us. Sniffing the
+      // gzip magic number is the only check that is right in both cases.
+      const buf = await r.arrayBuffer();
+      const h = new Uint8Array(buf, 0, Math.min(2, buf.byteLength));
+      if (h[0] === 0x1f && h[1] === 0x8b) {
+        if (typeof DecompressionStream === 'undefined')
+          throw new Error('This browser lacks DecompressionStream (Safari 16.4+ / Chrome 80+).');
+        out[k] = await new Response(
+          new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))
+        ).arrayBuffer();
+      } else out[k] = buf;
+    }
     done += weights[i];
     $('#loadBar').style.width = `${Math.round(done * 100)}%`;
   }
@@ -221,7 +235,7 @@ function syncDialog() {
     b.classList.toggle('on', b.dataset.opp === pendingOpp));
   document.querySelectorAll<HTMLButtonElement>('#segDepth button').forEach(b =>
     b.classList.toggle('on', Number(b.dataset.d) === pendingDepth));
-  ($('#depthRow') as HTMLElement).hidden = pendingOpp !== 'engine';
+  ($('#depthRow') as HTMLElement).hidden = !SHOW_DEPTH || pendingOpp !== 'engine';
 }
 function labels() {
   const t = T[lang];
@@ -233,7 +247,10 @@ function labels() {
   $('#pdT').textContent = t.pdT; $('#pdS').textContent = t.pdS;
   $('#plT').textContent = t.plT; $('#plS').textContent = t.plS;
   $('#brandSub').textContent = t.brandSub;
-  $('#loadTxt').textContent = t.loading; $('#loadSub').textContent = t.loadSub;
+  // The loading screen is removed once assets are in, so these are transient.
+  const lt = $('#loadTxt'), ls = $('#loadSub');
+  if (lt) lt.textContent = t.loading;
+  if (ls) ls.textContent = t.loadSub;
   if (ready) applyPanel();
   syncDialog();
 }
@@ -262,5 +279,20 @@ $('#bUndo').onclick = () => {
 };
 $('#bLang').onclick = () => { lang = lang === 'en' ? 'zh' : 'en'; idlePool = []; labels(); if (turn === human && !busy) sayTurn(); };
 
+/** A stalled loading screen with no message is the worst failure mode; surface it. */
+function showFatal(err: unknown) {
+  const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+  console.error(err);
+  const txt = $('#loadTxt'), sub = $('#loadSub'), bar = $('#loadBar');
+  if (txt && sub) {                       // still on the loading screen
+    txt.textContent = '😵 ' + T[lang].loadFail;
+    sub.textContent = msg.slice(0, 160);
+    if (bar) bar.style.background = '#c4483a';
+  } else banner('⚠ ' + msg.slice(0, 90));  // already playing: do not fail silently
+}
+addEventListener('unhandledrejection', e => showFatal(e.reason));
+addEventListener('error', e => showFatal((e as ErrorEvent).error ?? (e as ErrorEvent).message));
+
+drawFly($('#loadFly'), 'nap');
 labels(); render();
-boot();
+boot().catch(showFatal);

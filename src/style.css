@@ -23,6 +23,9 @@
 }
 
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+/* The UA rule for [hidden] is only specificity (0,1,0); .depthrow and #tree
+   both outrank it, so the attribute needs to be made authoritative here. */
+[hidden]{display:none !important}
 html,body{margin:0; height:100vh; height:100dvh}  /* dvh: Safari's 100vh excludes the toolbars */
 body{
   background:var(--bg); color:var(--text);
