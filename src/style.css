@@ -23,6 +23,9 @@
 }
 
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+/* The UA rule for [hidden] is only specificity (0,1,0); .depthrow and #tree
+   both outrank it, so the attribute needs to be made authoritative here. */
+[hidden]{display:none !important}
 html,body{margin:0; height:100vh; height:100dvh}  /* dvh: Safari's 100vh excludes the toolbars */
 body{
   background:var(--bg); color:var(--text);
@@ -193,3 +196,22 @@ button.b[disabled]{opacity:.4}
 
 .note a{color:var(--muted);text-decoration:underline;text-underline-offset:.2em}
 .note a:hover{color:var(--amber)}
+
+/* ---------- opponent / depth pickers ---------- */
+.seg{display:flex;gap:8px;margin:2px 0 14px}
+.seg button{
+  flex:1;font-family:inherit;font-weight:700;font-size:.92rem;
+  background:var(--bg);color:var(--muted);border:2px solid var(--line);
+  border-radius:12px;padding:10px 8px;min-height:52px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.seg button .ic{font-size:1.3rem;line-height:1}
+.seg button.on{border-color:var(--amber);background:var(--amber-soft);color:var(--text)}
+.seg button:active{transform:translateY(1px)}
+.seg button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.seg.small button{min-height:40px;font-size:.88rem;padding:6px 4px;border-width:1px;border-radius:9px}
+.depthrow{display:flex;align-items:center;gap:12px;margin:-6px 0 12px;
+          font-size:.86rem;color:var(--muted);font-weight:600}
+.depthrow .seg{flex:1;margin:0}
+#tree{width:100%;height:auto;display:block;border-radius:7px;background:#0a1416;aspect-ratio:320/154}
+@media (orientation:portrait){ .panel #tree{aspect-ratio:auto;height:92px} }
