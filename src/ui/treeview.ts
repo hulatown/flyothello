@@ -45,10 +45,14 @@ export class TreeView {
 
     // The root is a single known node, so it gets a narrow column instead of an
     // equal share; the depths that actually carry information get the rest.
+    // Columns must span the width of what is actually drawn, not of the trace:
+    // the deepest ply is summarised rather than rendered, so laying out for it
+    // left the whole right half of the panel empty.
+    const drawnD = Math.min(maxD, DRAW_DEPTH);
     const pad = 14, ch = H - pad * 2;
-    const x0 = pad, x1 = W * 0.15, xEnd = W * 0.90;
-    const cw = maxD > 1 ? (xEnd - x1) / (maxD - 1) : 0;
-    const xAt = (d: number) => (d === 0 ? x0 : x1 + (d - 1) * cw);
+    const x0 = pad, x1 = W * 0.15, xEnd = W - pad;
+    const cw = drawnD > 1 ? (xEnd - x1) / (drawnD - 1) : 0;
+    const xAt = (d: number) => (d === 0 ? x0 : x1 + (Math.min(d, drawnD) - 1) * cw);
     this.placed = new Array(trace.length);
     const walk = (id: number, y0: number, y1: number) => {
       const n = trace[id];
