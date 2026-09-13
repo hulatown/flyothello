@@ -39,7 +39,7 @@ export class EngineOpponent implements Opponent {
       say(tpl[(Math.random() * tpl.length) | 0]
            .replace('{n}', String(d.nodes)).replace('{d}', String(depth)));
     }
-    this.view()?.play(d.trace, ms, d.move);
+    this.view()?.play(d.trace, ms, d.move, n);
 
     return new Promise(res => setTimeout(() => res({
       move: d.move,

@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "verify": "tsx tools/verify_sim.mts"
+    "verify": "tsx tools/verify_sim.mts",
+    "preview:tree": "tsx tools/preview_tree.mts"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
@@ -34,5 +35,8 @@
     "othello",
     "reservoir-computing",
     "neuroscience"
-  ]
+  ],
+  "optionalDependencies": {
+    "canvas": "^3.2.3"
+  }
 }

@@ -44,6 +44,9 @@ npx tsx tools/verify_sim.mts       # TS must match bit-for-bit
 python3 tools/verify_policy.py     # reference scores and moves
 npx tsx tools/verify_policy.mts    # TS must choose the same move
 npx tsx tools/bench.mts            # per-move timing
+npx tsx tools/verify_ui.mts        # boots the real bundle in jsdom and drives the UI
+npm run preview:tree               # renders the decision tree to PNGs (needs the
+                                   # optional `canvas` package; design aid only)
 ```
 
 Both simulators use the same mulberry32 PRNG, so the two implementations are
